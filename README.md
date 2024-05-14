@@ -51,6 +51,11 @@ $ anvil
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
+Alternatively, if you have cast wallet set up (see below):
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --account <account_name>
+```
+
 ### Cast
 
 ```shell
@@ -63,4 +68,14 @@ $ cast <subcommand>
 $ forge --help
 $ anvil --help
 $ cast --help
+```
+
+## Course Notes
+
+### Use cast wallet
+
+Import wallet using the following, where the `<account_name>` is the name given to the account.
+
+```shell
+$ cast wallet import --interactive <account_name>
 ```

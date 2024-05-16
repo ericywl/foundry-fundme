@@ -1,65 +1,76 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-// import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {PriceConverter} from "./PriceConverter.sol";
 
-// contract FundMe {
-//     uint256 constant WEI_DENOMINATOR = 1e18;
+error FundMe__NotOwner();
 
-//     AggregatorV3Interface aggr;
+contract FundMe {
+    using PriceConverter for uint256;
 
-//     address public owner;
-//     mapping(address => uint256) public addressToAmountFunded;
-//     address[] public funders;
+    mapping(address => uint256) public addressToAmountFunded;
+    address[] public funders;
 
-//     constructor() {
-//         aggr = AggregatorV3Interface(
-//             0x694AA1769357215DE4FAC081bf1f309aDC325306
-//         );
-//         owner = msg.sender;
-//     }
+    uint256 public constant MINIMUM_USD = 5e18;
+    address public i_owner;
+    // Sepolia ETH / USD Address
+    // https://docs.chain.link/data-feeds/price-feeds/addresses
+    AggregatorV3Interface private s_priceFeed;
 
-//     // Modifier that only allows owner to execute.
-//     modifier onlyOwner() {
-//         require(msg.sender == owner, "You are not the owner");
-//         _;
-//     }
+    constructor(address priceFeedAddr) {
+        i_owner = msg.sender;
+        s_priceFeed = AggregatorV3Interface(priceFeedAddr);
+    }
 
-//     // Fund this contract with value from message.
-//     // The funding has to be at least $10.
-//     function fund() external payable {
-//         uint256 minDenominatedUSD = 10 * WEI_DENOMINATOR;
-//         require(
-//             getUSDFromWei(msg.value) >= minDenominatedUSD,
-//             "You need at least USD$10."
-//         );
-//         addressToAmountFunded[msg.sender] += msg.value;
-//         funders.push(msg.sender);
-//     }
+    function fund() public payable {
+        require(
+            msg.value.getUsdFromWei(s_priceFeed) >= MINIMUM_USD,
+            "You need to spend more ETH!"
+        );
+        addressToAmountFunded[msg.sender] += msg.value;
+        funders.push(msg.sender);
+    }
 
-//     function withdraw() external payable onlyOwner {
-//         // Transfer money to sender
-//         payable(msg.sender).transfer(address(this).balance);
-//         // Clear the funders array.
-//         for (uint256 i; i < funders.length; i++) {
-//             address funderAddr = funders[i];
-//             addressToAmountFunded[funderAddr] = 0;
-//         }
-//         funders = new address[](0);
-//     }
+    function getPriceConverterVersion() public view returns (uint256) {
+        return PriceConverter.getPriceFeedVersion(s_priceFeed);
+    }
 
-//     // Returns ETH price in denomimated USD i.e. multiplied by WEI_DENOMINATOR
-//     function getEthPriceInUSD() public view returns (uint256) {
-//         (, int256 answer, , , ) = aggr.latestRoundData();
-//         return
-//             (uint256(answer) * WEI_DENOMINATOR) /
-//             uint256(10 ** aggr.decimals());
-//     }
+    // Modifier that only allows owner to execute.
+    modifier onlyOwner() {
+        if (msg.sender != i_owner) revert FundMe__NotOwner();
+        _;
+    }
 
-//     // Returns denomiated USD i.e. multiplied by WEI_DENOMINATOR for amount in Wei
-//     function getUSDFromWei(uint256 amountInWei) public view returns (uint256) {
-//         uint256 price = getEthPriceInUSD();
-//         uint256 amountInUSD = (price * amountInWei) / WEI_DENOMINATOR;
-//         return amountInUSD;
-//     }
-// }
+    function withdraw() public onlyOwner {
+        // Clear the funders array
+        for (uint256 i = 0; i < funders.length; i++) {
+            address funder = funders[i];
+            addressToAmountFunded[funder] = 0;
+        }
+        funders = new address[](0);
+
+        // Transfer money to sender i.e. owner
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    // Explainer from: https://solidity-by-example.org/fallback/
+    // Ether is sent to contract
+    //      is msg.data empty?
+    //          /   \
+    //         yes  no
+    //         /     \
+    //    receive()?  fallback()
+    //     /   \
+    //   yes   no
+    //  /        \
+    //receive()  fallback()
+
+    fallback() external payable {
+        fund();
+    }
+
+    receive() external payable {
+        fund();
+    }
+}

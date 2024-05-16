@@ -9,14 +9,14 @@ error FundMe__NotOwner();
 contract FundMe {
     using PriceConverter for uint256;
 
-    mapping(address => uint256) public addressToAmountFunded;
-    address[] public funders;
-
     uint256 public constant MINIMUM_USD = 5e18;
-    address public i_owner;
+
+    mapping(address => uint256) private s_addressToAmountFunded;
+    address[] private s_funders;
     // Sepolia ETH / USD Address
     // https://docs.chain.link/data-feeds/price-feeds/addresses
     AggregatorV3Interface private s_priceFeed;
+    address private i_owner;
 
     constructor(address priceFeedAddr) {
         i_owner = msg.sender;
@@ -28,8 +28,8 @@ contract FundMe {
             msg.value.getUsdFromWei(s_priceFeed) >= MINIMUM_USD,
             "You need to spend more ETH!"
         );
-        addressToAmountFunded[msg.sender] += msg.value;
-        funders.push(msg.sender);
+        s_addressToAmountFunded[msg.sender] += msg.value;
+        s_funders.push(msg.sender);
     }
 
     function getPriceConverterVersion() public view returns (uint256) {
@@ -44,11 +44,11 @@ contract FundMe {
 
     function withdraw() public onlyOwner {
         // Clear the funders array
-        for (uint256 i = 0; i < funders.length; i++) {
-            address funder = funders[i];
-            addressToAmountFunded[funder] = 0;
+        for (uint256 i = 0; i < s_funders.length; i++) {
+            address funder = s_funders[i];
+            s_addressToAmountFunded[funder] = 0;
         }
-        funders = new address[](0);
+        s_funders = new address[](0);
 
         // Transfer money to sender i.e. owner
         payable(msg.sender).transfer(address(this).balance);
@@ -72,5 +72,23 @@ contract FundMe {
 
     receive() external payable {
         fund();
+    }
+
+    /**
+     * View / Pure functions
+     */
+
+    function getAddressToAmountFunded(
+        address fundingAddress
+    ) external view returns (uint256) {
+        return s_addressToAmountFunded[fundingAddress];
+    }
+
+    function getFunder(uint256 index) external view returns (address) {
+        return s_funders[index];
+    }
+
+    function getOwner() external view returns (address) {
+        return i_owner;
     }
 }

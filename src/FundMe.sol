@@ -43,10 +43,9 @@ contract FundMe {
         _;
     }
 
-    function cheaperWithdraw() public onlyOwner {
+    function withdraw() public onlyOwner {
         // Clear the funders array
-        uint256 fundersLen = s_funders.length;
-        for (uint256 i = 0; i < fundersLen; i++) {
+        for (uint256 i = 0; i < s_funders.length; i++) {
             address funder = s_funders[i];
             s_addressToAmountFunded[funder] = 0;
         }
@@ -56,9 +55,11 @@ contract FundMe {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function withdraw() public onlyOwner {
+    function cheaperWithdraw() public onlyOwner {
         // Clear the funders array
-        for (uint256 i = 0; i < s_funders.length; i++) {
+        // Read the length first to avoid loading from storage every loop
+        uint256 fundersLen = s_funders.length;
+        for (uint256 i = 0; i < fundersLen; i++) {
             address funder = s_funders[i];
             s_addressToAmountFunded[funder] = 0;
         }

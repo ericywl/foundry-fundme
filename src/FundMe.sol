@@ -13,10 +13,11 @@ contract FundMe {
 
     mapping(address => uint256) private s_addressToAmountFunded;
     address[] private s_funders;
+
     // Sepolia ETH / USD Address
     // https://docs.chain.link/data-feeds/price-feeds/addresses
     AggregatorV3Interface private s_priceFeed;
-    address private i_owner;
+    address private immutable i_owner;
 
     constructor(address priceFeedAddr) {
         i_owner = msg.sender;
@@ -40,6 +41,19 @@ contract FundMe {
     modifier onlyOwner() {
         if (msg.sender != i_owner) revert FundMe__NotOwner();
         _;
+    }
+
+    function cheaperWithdraw() public onlyOwner {
+        // Clear the funders array
+        uint256 fundersLen = s_funders.length;
+        for (uint256 i = 0; i < fundersLen; i++) {
+            address funder = s_funders[i];
+            s_addressToAmountFunded[funder] = 0;
+        }
+        s_funders = new address[](0);
+
+        // Transfer money to sender i.e. owner
+        payable(msg.sender).transfer(address(this).balance);
     }
 
     function withdraw() public onlyOwner {

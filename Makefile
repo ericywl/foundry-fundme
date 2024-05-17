@@ -1,13 +1,37 @@
 -include .env
 
-build:
+.PHONY: help
+help: # Show help for each of the Makefile recipes.
+	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
+
+.PHONY: clean
+clean: # Clean the repo
+	forge clean
+
+.PHONY: install
+install : # Install requirements
+	forge install cyfrin/foundry-devops@0.0.11 --no-commit && \
+		forge install smartcontractkit/chainlink-brownie-contracts@0.6.1 --no-commit && \
+		forge install foundry-rs/forge-std@v1.5.3 --no-commit
+
+.PHONY: build
+build: # Build the repo
 	forge build
 
-deploy-sepolia:
+.PHONY: deploy-sepolia
+deploy-sepolia: # Deploy contracts to Sepolia test net
 	forge script script/DeployFundMe.s.sol:DeployFundMe \
 		--rpc-url $(SEPOLIA_RPC_URL) \
 		--account $(SEPOLIA_ACCOUNT) \
 		--broadcast \
 		--verify \
 		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		-vvvv
+
+.PHONY: deploy-anvil
+deploy-anvil: # Deploy contracts to local Anvil
+	forge script script/DeployFundMe.s.sol:DeployFundMe \
+		--rpc-url $(ANVIL_RPC_URL) \
+		--account $(ANVIL_ACCOUNT) \
+		--broadcast \
 		-vvvv

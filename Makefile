@@ -20,6 +20,15 @@ build: # Build the repo
 
 .PHONY: deploy-sepolia
 deploy-sepolia: # Deploy contracts to Sepolia test net
+ifndef SEPOLIA_RPC_URL
+	$(error SEPOLIA_RPC_URL is undefined)
+endif
+ifndef SEPOLIA_ACCOUNT
+	$(error SEPOLIA_ACCOUNT is undefined)
+endif
+ifndef ETHERSCAN_API_KEY
+	$(error ETHERSCAN_API_KEY is undefined)
+endif
 	forge script script/DeployFundMe.s.sol:DeployFundMe \
 		--rpc-url $(SEPOLIA_RPC_URL) \
 		--account $(SEPOLIA_ACCOUNT) \
@@ -30,6 +39,12 @@ deploy-sepolia: # Deploy contracts to Sepolia test net
 
 .PHONY: deploy-anvil
 deploy-anvil: # Deploy contracts to local Anvil
+ifndef ANVIL_RPC_URL
+	$(error ANVIL_RPC_URL is undefined)
+endif
+ifndef ANVIL_ACCOUNT
+	$(error ANVIL_ACCOUNT is undefined)
+endif
 	forge script script/DeployFundMe.s.sol:DeployFundMe \
 		--rpc-url $(ANVIL_RPC_URL) \
 		--account $(ANVIL_ACCOUNT) \
